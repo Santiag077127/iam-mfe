@@ -55,12 +55,24 @@ describe("Auth API adapter password reset", () => {
 
   it("sends login credentials to the IAM login endpoint", async () => {
     const fetchMock = vi.fn().mockResolvedValue(response(200, {
-      accessToken: "access-token",
-      refreshToken: "refresh-token"
+      access_token: "access-token",
+      refresh_token: "refresh-token",
+      token_type: "Bearer",
+      expires_in: 900,
+      user: {
+        id: "user-id",
+        email: "qa.user@sena.edu.co",
+        full_name: "QA User",
+        roles: ["REFERENCE_VIEWER"],
+        training_center_id: "center-id",
+        features: ["REF_HIERARCHY_VIEW:GLOBAL", "REF_CATALOG_VIEW:GLOBAL"]
+      }
     }));
     vi.stubGlobal("fetch", fetchMock);
+    const sessionChanged = vi.fn();
+    window.addEventListener("sena:session-changed", sessionChanged);
 
-    await login("qa.user", "TestPassword1!");
+    const result = await login("qa.user", "TestPassword1!");
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/auth/login",
@@ -71,6 +83,36 @@ describe("Auth API adapter password reset", () => {
     );
     expect(sessionStorage.getItem("sena.access_token")).toBe("access-token");
     expect(sessionStorage.getItem("sena.refresh_token")).toBe("refresh-token");
+    expect(sessionChanged).toHaveBeenCalledTimes(1);
+    expect(result.user).toEqual({
+      id: "user-id",
+      email: "qa.user@sena.edu.co",
+      fullName: "QA User",
+      roles: ["REFERENCE_VIEWER"],
+      trainingCenterId: "center-id",
+      features: ["REF_HIERARCHY_VIEW:GLOBAL", "REF_CATALOG_VIEW:GLOBAL"]
+    });
+    window.removeEventListener("sena:session-changed", sessionChanged);
+  });
+
+  it("rejects a successful response without the required tokens", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response(200, {
+      token_type: "Bearer",
+      expires_in: 900,
+      user: {
+        id: "user-id",
+        email: "qa.user@sena.edu.co",
+        full_name: "QA User",
+        roles: [],
+        features: []
+      }
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(login("qa.user", "TestPassword1!")).rejects.toMatchObject({
+      message: "La respuesta de autenticacion no contiene la sesion requerida.",
+      status: 502
+    });
   });
 
   it("normalizes invalid reset token errors from the envelope", async () => {
