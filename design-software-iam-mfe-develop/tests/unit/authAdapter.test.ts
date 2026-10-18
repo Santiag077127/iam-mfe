@@ -20,6 +20,7 @@ function response(status: number, body?: unknown) {
 describe("Auth API adapter password reset", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    sessionStorage.clear();
   });
 
   it("sends reset requests with the email field", async () => {
@@ -53,7 +54,10 @@ describe("Auth API adapter password reset", () => {
   });
 
   it("sends login credentials to the IAM login endpoint", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(response(200, { data: {} }));
+    const fetchMock = vi.fn().mockResolvedValue(response(200, {
+      accessToken: "access-token",
+      refreshToken: "refresh-token"
+    }));
     vi.stubGlobal("fetch", fetchMock);
 
     await login("qa.user", "TestPassword1!");
@@ -61,10 +65,12 @@ describe("Auth API adapter password reset", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/auth/login",
       expect.objectContaining({
-        body: JSON.stringify({ identifier: "qa.user", password: "TestPassword1!" }),
+        body: JSON.stringify({ email: "qa.user", password: "TestPassword1!" }),
         method: "POST"
       })
     );
+    expect(sessionStorage.getItem("sena.access_token")).toBe("access-token");
+    expect(sessionStorage.getItem("sena.refresh_token")).toBe("refresh-token");
   });
 
   it("normalizes invalid reset token errors from the envelope", async () => {

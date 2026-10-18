@@ -24,6 +24,7 @@ describe("HU-IAM-014 password reset flow", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    sessionStorage.clear();
     vi.useRealTimers();
     window.history.replaceState(null, "", "/login");
   });
@@ -42,7 +43,10 @@ describe("HU-IAM-014 password reset flow", () => {
 
   it("authenticates through the login endpoint", async () => {
     window.history.replaceState(null, "", "/login");
-    fetchMock.mockResolvedValue(response(200, { data: {} }));
+    fetchMock.mockResolvedValue(response(200, {
+      accessToken: "access-token",
+      refreshToken: "refresh-token"
+    }));
 
     render(<App />);
     fireEvent.change(screen.getByLabelText("Correo o usuario"), {
@@ -57,7 +61,7 @@ describe("HU-IAM-014 password reset flow", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/auth/login",
       expect.objectContaining({
-        body: JSON.stringify({ identifier: "qa.user", password: "TestPassword1!" })
+        body: JSON.stringify({ email: "qa.user", password: "TestPassword1!" })
       })
     );
   });
@@ -66,7 +70,10 @@ describe("HU-IAM-014 password reset flow", () => {
     window.history.replaceState(null, "", "/login");
     fetchMock.mockResolvedValue(
       response(200, {
-        data: { temporaryPasswordRequired: true, resetToken: "temporary-token" }
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        temporaryPasswordRequired: true,
+        resetToken: "temporary-token"
       })
     );
 

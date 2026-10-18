@@ -7,7 +7,10 @@ export type ApiEnvelope<T = unknown> = {
   };
 };
 
-const API_BASE_URL = import.meta.env.VITE_IAM_API_URL ?? "";
+const API_BASE_URL = (import.meta.env.VITE_IAM_API_URL ?? "").replace(/\/$/, "");
+
+const ACCESS_TOKEN_KEY = "sena.access_token";
+const REFRESH_TOKEN_KEY = "sena.refresh_token";
 
 export type LoginResponse = {
   accessToken?: string;
@@ -46,8 +49,9 @@ function getFallbackMessage(status: number, code?: string) {
 
 async function post<TBody extends object, TResponse = unknown>(
   path: string,
-  body: TBody
-): Promise<ApiEnvelope<TResponse>> {
+  body: TBody,
+  unwrap: (payload: ApiEnvelope<TResponse>) => TResponse = (payload) => payload.data as TResponse
+): Promise<TResponse> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
@@ -66,7 +70,7 @@ async function post<TBody extends object, TResponse = unknown>(
     );
   }
 
-  return payload;
+  return unwrap(payload);
 }
 
 export function requestPasswordReset(email: string) {
@@ -78,8 +82,17 @@ export function confirmPasswordReset(token: string, password: string) {
 }
 
 export function login(identifier: string, password: string) {
-  return post<{ identifier: string; password: string }, LoginResponse>("/auth/login", {
-    identifier,
+  return post<{ email: string; password: string }, LoginResponse>("/auth/login", {
+    email: identifier,
     password
+  }, (payload) => payload as unknown as LoginResponse).then((response) => {
+    if (!response.accessToken || !response.refreshToken) {
+      throw new AuthApiError("La respuesta de autenticacion no contiene la sesion requerida.", 502);
+    }
+
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
+    window.dispatchEvent(new Event("sena:session-changed"));
+    return response;
   });
 }
