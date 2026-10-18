@@ -31,8 +31,8 @@ export function LoginScreen({
     try {
       const response = await login(identifier.trim(), password);
       const redirect = getTemporaryPasswordRedirect({
-        temporaryPasswordRequired: response.data?.temporaryPasswordRequired,
-        resetToken: response.data?.resetToken
+        temporaryPasswordRequired: response.temporaryPasswordRequired,
+        resetToken: response.resetToken
       });
 
       if (redirect) {
