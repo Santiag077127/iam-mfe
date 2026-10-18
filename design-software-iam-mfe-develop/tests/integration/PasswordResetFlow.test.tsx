@@ -44,8 +44,18 @@ describe("HU-IAM-014 password reset flow", () => {
   it("authenticates through the login endpoint", async () => {
     window.history.replaceState(null, "", "/login");
     fetchMock.mockResolvedValue(response(200, {
-      accessToken: "access-token",
-      refreshToken: "refresh-token"
+      access_token: "access-token",
+      refresh_token: "refresh-token",
+      token_type: "Bearer",
+      expires_in: 900,
+      user: {
+        id: "user-id",
+        email: "qa.user@sena.edu.co",
+        full_name: "QA User",
+        roles: ["REFERENCE_VIEWER"],
+        training_center_id: "center-id",
+        features: ["REF_HIERARCHY_VIEW:GLOBAL"]
+      }
     }));
 
     render(<App />);
@@ -70,10 +80,20 @@ describe("HU-IAM-014 password reset flow", () => {
     window.history.replaceState(null, "", "/login");
     fetchMock.mockResolvedValue(
       response(200, {
-        accessToken: "access-token",
-        refreshToken: "refresh-token",
-        temporaryPasswordRequired: true,
-        resetToken: "temporary-token"
+        access_token: "access-token",
+        refresh_token: "refresh-token",
+        token_type: "Bearer",
+        expires_in: 900,
+        user: {
+          id: "user-id",
+          email: "qa.user@sena.edu.co",
+          full_name: "QA User",
+          roles: ["REFERENCE_VIEWER"],
+          training_center_id: "center-id",
+          features: ["REF_HIERARCHY_VIEW:GLOBAL"]
+        },
+        temporary_password_required: true,
+        reset_token: "temporary-token"
       })
     );
 

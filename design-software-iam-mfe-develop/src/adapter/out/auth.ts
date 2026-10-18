@@ -13,16 +13,57 @@ const ACCESS_TOKEN_KEY = "sena.access_token";
 const REFRESH_TOKEN_KEY = "sena.refresh_token";
 
 export type LoginResponse = {
-  accessToken?: string;
-  refreshToken?: string;
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
   user?: {
     id: string;
-    name?: string;
-    email?: string;
+    email: string;
+    fullName?: string;
+    roles: string[];
+    trainingCenterId?: string | null;
+    features: string[];
   };
   temporaryPasswordRequired?: boolean;
   resetToken?: string;
 };
+
+type LoginHttpResponse = {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: {
+    id: string;
+    email: string;
+    full_name: string;
+    roles: string[];
+    training_center_id?: string | null;
+    features: string[];
+  };
+  temporary_password_required?: boolean;
+  reset_token?: string;
+};
+
+function mapLoginResponse(payload: LoginHttpResponse): LoginResponse {
+  return {
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token,
+    tokenType: payload.token_type,
+    expiresIn: payload.expires_in,
+    user: {
+      id: payload.user.id,
+      email: payload.user.email,
+      fullName: payload.user.full_name,
+      roles: payload.user.roles,
+      trainingCenterId: payload.user.training_center_id,
+      features: payload.user.features
+    },
+    temporaryPasswordRequired: payload.temporary_password_required,
+    resetToken: payload.reset_token
+  };
+}
 
 export class AuthApiError extends Error {
   constructor(
@@ -85,7 +126,7 @@ export function login(identifier: string, password: string) {
   return post<{ email: string; password: string }, LoginResponse>("/auth/login", {
     email: identifier,
     password
-  }, (payload) => payload as unknown as LoginResponse).then((response) => {
+  }, (payload) => mapLoginResponse(payload as unknown as LoginHttpResponse)).then((response) => {
     if (!response.accessToken || !response.refreshToken) {
       throw new AuthApiError("La respuesta de autenticacion no contiene la sesion requerida.", 502);
     }
